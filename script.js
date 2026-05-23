@@ -1,79 +1,232 @@
-function calculateLoan() {
-    // 入力値の取得
-    const price = parseFloat(document.getElementById('price').value) || 0;
-    const downPayment = parseFloat(document.getElementById('down-payment').value) || 0;
-    const years = parseFloat(document.getElementById('years').value) || 0; // 単位：年
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
-    const bonusTimes = parseInt(document.getElementById('bonus-times').value);
-    const bonusAmount = parseFloat(document.getElementById('bonus-amount').value) || 0;
+/* 全体のリセットとベース設定 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-    // バリデーション
-    if (price <= 0 || years <= 0) {
-        alert("車両価格と支払期間は正しく入力してください。");
-        return;
-    }
-    if (downPayment >= price) {
-        alert("頭金が車両価格を超えています。");
-        return;
-    }
+body {
+    background-color: #000000;
+    color: #FFD700;
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
 
-    // ローン元金（借入総額）
-    const P = price - downPayment;
-    
-    // 総支払回数（ヶ月）
-    const M = years * 12;
-    
-    // 月利の計算
-    const r = rate / 100 / 12;
+/* スマホサイズのコンテナ */
+.app-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    background-color: #000000;
+}
 
-    // 総ボーナス回数とボーナス支払総額
-    const totalBonusCount = years * bonusTimes;
-    const T = bonusAmount * totalBonusCount;
+/* ヘッダー */
+header {
+    text-align: center;
+    margin-bottom: 25px;
+    padding-top: 10px;
+}
+h1 {
+    font-size: 24px;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+.notice-text {
+    font-size: 11px;
+    color: #CCCC00;
+    line-height: 1.4;
+    text-align: left;
+    background-color: #111100;
+    border: 1px solid #555500;
+    padding: 10px;
+    border-radius: 6px;
+}
 
-    let x = 0; // 月々の支払額
-    let d = 0; // 増えた分（利息）
+/* 入力エリア */
+.input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
 
-    if (r > 0) {
-        // 【元金二分割・現在価値法】
-        // ボーナスが支払われる間隔（年2回なら6ヶ月ごと、年1回なら12ヶ月ごと）
-        const interval = 12 / bonusTimes; 
-        
-        // 各ボーナス月の割引因子の総和を等比数列の和の公式で計算
-        // 割引因子 x_factor = (1 + r)^(-interval)
-        const x_factor = Math.pow(1 + r, -interval);
-        const pvBonus = bonusAmount * x_factor * ((1 - Math.pow(x_factor, totalBonusCount)) / (1 - x_factor));
+.input-group label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
 
-        // 毎月返済分に割り当てられる純粋な元金
-        const P_monthly = P - pvBonus;
+input, select {
+    width: 100%;
+    background-color: #111111;
+    color: #FFD700;
+    border: 2px solid #FFD700;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    outline: none;
+    transition: 0.3s;
+}
 
-        if (P_monthly < 0) {
-            alert("ボーナス払いの設定額が高すぎます。借入元金を超えています。");
-            return;
-        }
+input:focus, select:focus {
+    box-shadow: 0 0 10px #FFD700;
+    background-color: #222222;
+}
+input::placeholder {
+    color: #887700;
+}
 
-        // 毎月分の元金(P_monthly)に対して、元利均等返済の公式を適用
-        x = P_monthly * (r * Math.pow(1 + r, M)) / (Math.pow(1 + r, M) - 1);
-        
-        // 利息の総額 ＝（毎月の返済総額 ＋ ボーナス返済総額）− 最初に借りた元金
-        d = (x * M + T) - P;
+/* メインボタン */
+#calc-btn {
+    margin-top: 10px;
+    width: 100%;
+    background-color: #FFD700;
+    color: #000000;
+    border: none;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+}
+#calc-btn:active {
+    transform: scale(0.98);
+    box-shadow: none;
+}
 
-    } else {
-        // 金利が0%の場合
-        x = (P - T) / M;
-        d = 0;
-        if (x < 0) {
-            alert("ボーナス払いの設定額が高すぎます。借入元金を超えています。");
-            return;
-        }
-    }
+/* 詳細表示ボタン (枠線だけのデザイン) */
+.secondary-btn {
+    width: 100%;
+    background-color: transparent;
+    color: #FFD700;
+    border: 1px solid #FFD700;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    transition: 0.2s;
+}
+.secondary-btn:active {
+    background-color: #333300;
+}
 
-    // 画面に表示（小数点第1位まで）
-    document.getElementById('res-monthly').innerText = x.toFixed(1);
-    document.getElementById('res-interest').innerText = d.toFixed(1);
+/* 結果表示エリア */
+.hidden {
+    display: none !important;
+}
+#result-section {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    border-top: 2px dashed #FFD700;
+    padding-top: 20px;
+}
+.result-box {
+    background-color: #1a1a00;
+    border: 2px solid #FFD700;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+.result-title {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+.result-value {
+    font-size: 32px;
+    font-weight: bold;
+}
+.unit {
+    font-size: 16px;
+    font-weight: normal;
+}
+.joke-text {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFF;
+    text-shadow: 0 0 5px #FFD700;
+    margin-bottom: 5px;
+}
 
-    // 結果エリアを表示する
-    document.getElementById('result-section').classList.remove('hidden');
-    
-    // スクロールして結果を見やすくする
-    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+/* 推移表（テーブル）のデザイン */
+#schedule-section {
+    overflow-x: auto; /* スマホではみ出た場合に横スクロール */
+    background-color: #111;
+    border-radius: 6px;
+    border: 1px solid #555500;
+    margin-top: 10px;
+}
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+}
+.schedule-table th, .schedule-table td {
+    padding: 10px 6px;
+    border-bottom: 1px solid #333300;
+}
+.schedule-table th {
+    background-color: #222200;
+    color: #FFD700;
+    text-align: center;
+    font-weight: normal;
+}
+.schedule-table td:first-child {
+    text-align: center;
+    color: #AAAAAA;
+}
+/* ボーナス月の行のスタイル */
+.bonus-row {
+    background-color: #2a2a00;
+}
+.bonus-row td {
+    color: #FFF;
+    font-weight: bold;
+}
+
+/* 計算式エリア */
+.formula-section {
+    margin-top: 40px;
+    border-top: 2px solid #FFD700;
+    padding-top: 20px;
+    padding-bottom: 30px;
+}
+.formula-section h3 {
+    font-size: 15px;
+    margin-bottom: 5px;
+    text-align: center;
+}
+.formula-section > p {
+    font-size: 12px;
+    color: #CCCC00;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.formula-block {
+    background-color: #111111;
+    border: 1px solid #444400;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.formula-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #FFF;
+    margin-bottom: 4px;
+}
+.formula-exp {
+    font-size: 14px;
+    font-family: 'Courier New', Courier, monospace;
+    color: #FFD700;
+    word-break: break-all;
 }
