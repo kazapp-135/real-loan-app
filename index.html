@@ -14,7 +14,7 @@
         <header>
             <h1>リアルローンアプリ</h1>
             <p class="notice-text">
-                ※本アプリは、金融機関の実務や大手自動車サイトのシステムで採用されている「元金二分割・現在価値割引法」を用いた超高精度シミュレーターです。ボーナス先引き算方式を廃止し、リアルな返済計画を算出します。
+                ※本アプリは「元金二分割・現在価値割引法」を用いた超高精度シミュレーターです。
             </p>
         </header>
 
@@ -60,6 +60,23 @@
                 <p class="result-value"><span id="res-interest">0</span> <span class="unit">万円</span></p>
             </div>
             <p class="joke-text">稼いだ分だけ気合いのローン！</p>
+
+            <button id="toggle-btn" class="secondary-btn" onclick="toggleSchedule()">詳細を表示</button>
+
+            <div id="schedule-section" class="hidden">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>年月</th>
+                            <th>返済額</th>
+                            <th>うち利息</th>
+                            <th>ローン残高</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-body">
+                        </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="formula-section">
@@ -70,23 +87,18 @@
                 <p class="formula-title">① 総支払回数 (M)</p>
                 <p class="formula-exp">M = 支払期間(年) × 12</p>
             </div>
-
             <div class="formula-block">
                 <p class="formula-title">② 月利 (r)</p>
                 <p class="formula-exp">r = 金利(%) ÷ 100 ÷ 12</p>
             </div>
-
             <div class="formula-block">
                 <p class="formula-title">③ ボーナス分に割り当てられる元金 (P<sub>b</sub>)</p>
                 <p class="formula-exp">P<sub>b</sub> = ボーナス1回額 × ∑ [ (1+r)<sup>−t</sup> ]</p>
-                <span class="formula-note">※t = ボーナスが支払われる全ての月（等比数列の和で逆算）</span>
             </div>
-
             <div class="formula-block">
                 <p class="formula-title">④ 毎月返済分の元金 (P<sub>m</sub>)</p>
                 <p class="formula-exp">P<sub>m</sub> = (車両価格 − 頭金) − P<sub>b</sub></p>
             </div>
-
             <div class="formula-block">
                 <p class="formula-title">⑤ 月々の支払額 (X)</p>
                 <p class="formula-exp">X = P<sub>m</sub> × [ r(1+r)<sup>M</sup> ] ÷ [ (1+r)<sup>M</sup> − 1 ]</p>
