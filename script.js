@@ -1,232 +1,121 @@
-/* 全体のリセットとベース設定 */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+function calculateLoan() {
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const downPayment = parseFloat(document.getElementById('down-payment').value) || 0;
+    const years = parseFloat(document.getElementById('years').value) || 0;
+    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const bonusTimes = parseInt(document.getElementById('bonus-times').value);
+    const bonusAmount = parseFloat(document.getElementById('bonus-amount').value) || 0;
+
+    if (price <= 0 || years <= 0) {
+        alert("車両価格と支払期間は正しく入力してください。");
+        return;
+    }
+    if (downPayment >= price) {
+        alert("頭金が車両価格を超えています。");
+        return;
+    }
+
+    const P = price - downPayment;
+    const M = years * 12;
+    const r = rate / 100 / 12;
+    const totalBonusCount = years * bonusTimes;
+    const T = bonusAmount * totalBonusCount;
+
+    let x = 0;
+    let d = 0;
+    const interval = 12 / bonusTimes;
+
+    if (r > 0) {
+        const x_factor = Math.pow(1 + r, -interval);
+        const pvBonus = bonusAmount * x_factor * ((1 - Math.pow(x_factor, totalBonusCount)) / (1 - x_factor));
+        const P_monthly = P - pvBonus;
+
+        if (P_monthly < 0) {
+            alert("ボーナス払いの設定額が高すぎます。借入元金を超えています。");
+            return;
+        }
+
+        x = P_monthly * (r * Math.pow(1 + r, M)) / (Math.pow(1 + r, M) - 1);
+        d = (x * M + T) - P;
+    } else {
+        x = (P - T) / M;
+        d = 0;
+        if (x < 0) {
+            alert("ボーナス払いの設定額が高すぎます。借入元金を超えています。");
+            return;
+        }
+    }
+
+    // 基本結果の表示
+    document.getElementById('res-monthly').innerText = x.toFixed(1);
+    document.getElementById('res-interest').innerText = d.toFixed(1);
+
+    // --- ここから推移表（スケジュール）の生成処理 ---
+    let currentBalance = P; // 最初は元金フルマックスからスタート
+    let scheduleHTML = '';
+
+    for (let i = 1; i <= M; i++) {
+        // 今月はボーナス月かどうか判定
+        const isBonus = (i % interval === 0);
+        const currentBonus = isBonus ? bonusAmount : 0;
+        
+        // 今月の支払総額 (基本の月々額 + ボーナスがあればボーナス)
+        const paymentThisMonth = x + currentBonus;
+
+        // 今月の利息 (先月の残高 × 月利)
+        const interestThisMonth = currentBalance * r;
+        
+        // 今月返した「純粋な借金(元金)」の額
+        const principalThisMonth = paymentThisMonth - interestThisMonth;
+
+        // 残高から元金分を引く
+        currentBalance -= principalThisMonth;
+
+        // 小数点の計算誤差で最後の月に残高が微量のマイナスになるのを防ぐ
+        if (currentBalance < 0 || i === M) {
+            currentBalance = 0;
+        }
+
+        // 年と月のラベル生成 (0年1ヶ月目からスタート)
+        const yearLabel = Math.floor((i - 1) / 12);
+        const monthLabel = ((i - 1) % 12) + 1;
+        
+        // ボーナス月なら行のクラスを変更（CSSで色を変えるため）
+        const rowClass = isBonus ? ' class="bonus-row"' : '';
+
+        // 表の1行分のHTMLを作成
+        scheduleHTML += `<tr${rowClass}>
+            <td>${yearLabel}年${monthLabel}ヶ月</td>
+            <td>${paymentThisMonth.toFixed(1)}</td>
+            <td>${interestThisMonth.toFixed(1)}</td>
+            <td>${currentBalance.toFixed(1)}</td>
+        </tr>`;
+    }
+
+    // 作成したHTMLを表の中に流し込む
+    document.getElementById('schedule-body').innerHTML = scheduleHTML;
+
+    // 計算し直すたびに表は一旦閉じた状態に戻す
+    document.getElementById('schedule-section').classList.add('hidden');
+    document.getElementById('toggle-btn').innerText = '詳細を表示';
+
+    // エリアを表示してスクロール
+    document.getElementById('result-section').classList.remove('hidden');
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
 }
 
-body {
-    background-color: #000000;
-    color: #FFD700;
-    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
-    display: flex;
-    justify-content: center;
-    min-height: 100vh;
-}
-
-/* スマホサイズのコンテナ */
-.app-container {
-    width: 100%;
-    max-width: 400px;
-    padding: 20px;
-    background-color: #000000;
-}
-
-/* ヘッダー */
-header {
-    text-align: center;
-    margin-bottom: 25px;
-    padding-top: 10px;
-}
-h1 {
-    font-size: 24px;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-}
-.notice-text {
-    font-size: 11px;
-    color: #CCCC00;
-    line-height: 1.4;
-    text-align: left;
-    background-color: #111100;
-    border: 1px solid #555500;
-    padding: 10px;
-    border-radius: 6px;
-}
-
-/* 入力エリア */
-.input-section {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.input-group label {
-    display: block;
-    font-size: 14px;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-input, select {
-    width: 100%;
-    background-color: #111111;
-    color: #FFD700;
-    border: 2px solid #FFD700;
-    padding: 12px;
-    font-size: 16px;
-    border-radius: 8px;
-    outline: none;
-    transition: 0.3s;
-}
-
-input:focus, select:focus {
-    box-shadow: 0 0 10px #FFD700;
-    background-color: #222222;
-}
-input::placeholder {
-    color: #887700;
-}
-
-/* メインボタン */
-#calc-btn {
-    margin-top: 10px;
-    width: 100%;
-    background-color: #FFD700;
-    color: #000000;
-    border: none;
-    padding: 15px;
-    font-size: 18px;
-    font-weight: bold;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
-}
-#calc-btn:active {
-    transform: scale(0.98);
-    box-shadow: none;
-}
-
-/* 詳細表示ボタン (枠線だけのデザイン) */
-.secondary-btn {
-    width: 100%;
-    background-color: transparent;
-    color: #FFD700;
-    border: 1px solid #FFD700;
-    padding: 10px;
-    font-size: 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    transition: 0.2s;
-}
-.secondary-btn:active {
-    background-color: #333300;
-}
-
-/* 結果表示エリア */
-.hidden {
-    display: none !important;
-}
-#result-section {
-    margin-top: 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    border-top: 2px dashed #FFD700;
-    padding-top: 20px;
-}
-.result-box {
-    background-color: #1a1a00;
-    border: 2px solid #FFD700;
-    border-radius: 8px;
-    padding: 15px;
-    text-align: center;
-}
-.result-title {
-    font-size: 14px;
-    margin-bottom: 5px;
-}
-.result-value {
-    font-size: 32px;
-    font-weight: bold;
-}
-.unit {
-    font-size: 16px;
-    font-weight: normal;
-}
-.joke-text {
-    text-align: center;
-    font-size: 16px;
-    font-weight: bold;
-    color: #FFF;
-    text-shadow: 0 0 5px #FFD700;
-    margin-bottom: 5px;
-}
-
-/* 推移表（テーブル）のデザイン */
-#schedule-section {
-    overflow-x: auto; /* スマホではみ出た場合に横スクロール */
-    background-color: #111;
-    border-radius: 6px;
-    border: 1px solid #555500;
-    margin-top: 10px;
-}
-.schedule-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    text-align: right;
-    white-space: nowrap;
-}
-.schedule-table th, .schedule-table td {
-    padding: 10px 6px;
-    border-bottom: 1px solid #333300;
-}
-.schedule-table th {
-    background-color: #222200;
-    color: #FFD700;
-    text-align: center;
-    font-weight: normal;
-}
-.schedule-table td:first-child {
-    text-align: center;
-    color: #AAAAAA;
-}
-/* ボーナス月の行のスタイル */
-.bonus-row {
-    background-color: #2a2a00;
-}
-.bonus-row td {
-    color: #FFF;
-    font-weight: bold;
-}
-
-/* 計算式エリア */
-.formula-section {
-    margin-top: 40px;
-    border-top: 2px solid #FFD700;
-    padding-top: 20px;
-    padding-bottom: 30px;
-}
-.formula-section h3 {
-    font-size: 15px;
-    margin-bottom: 5px;
-    text-align: center;
-}
-.formula-section > p {
-    font-size: 12px;
-    color: #CCCC00;
-    text-align: center;
-    margin-bottom: 20px;
-}
-.formula-block {
-    background-color: #111111;
-    border: 1px solid #444400;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 12px;
-}
-.formula-title {
-    font-size: 12px;
-    font-weight: bold;
-    color: #FFF;
-    margin-bottom: 4px;
-}
-.formula-exp {
-    font-size: 14px;
-    font-family: 'Courier New', Courier, monospace;
-    color: #FFD700;
-    word-break: break-all;
+// 詳細ボタンを押した時の開閉（トグル）機能
+function toggleSchedule() {
+    const sec = document.getElementById('schedule-section');
+    const btn = document.getElementById('toggle-btn');
+    
+    if (sec.classList.contains('hidden')) {
+        sec.classList.remove('hidden');
+        btn.innerText = '詳細を閉じる';
+        // 表の下まで少しスクロール
+        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        sec.classList.add('hidden');
+        btn.innerText = '詳細を表示';
+    }
 }
