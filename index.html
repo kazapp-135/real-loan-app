@@ -3,65 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>リアルローンアプリ</title>
+    <title>改・リアルローンアプリ</title>
     <link rel="stylesheet" href="style.css">
-    <meta name="apple-mobile-web-app-title" content="リアルローン">
+    <meta name="apple-mobile-web-app-title" content="改・リアルローン">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1>リアルローンアプリ</h1>
+            <h1>改・リアルローン</h1>
             <p class="notice-text">
-                ※本アプリは「元金二分割・現在価値割引法」を用いた超高精度シミュレーターです。
+                ※知りたい項目を<strong>１つだけ空欄</strong>にして計算ボタンを押してください。<br>
+                （※頭金は空欄の場合「0万円」として扱われます）
             </p>
         </header>
 
         <div class="input-section">
             <div class="input-group">
                 <label>車両価格 (万円)</label>
-                <input type="number" id="price" placeholder="例: 219.9" step="0.1">
+                <input type="number" id="price" placeholder="例: 400 (空欄で逆算)" step="0.1">
             </div>
             <div class="input-group">
                 <label>頭金 (万円)</label>
-                <input type="number" id="down-payment" placeholder="例: 60" step="0.1">
+                <input type="number" id="down-payment" placeholder="例: 0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label>月々の支払額 (万円) ★</label>
+                <input type="number" id="monthly" placeholder="例: 2 (空欄で逆算)" step="0.1">
             </div>
             <div class="input-group">
                 <label>支払期間 (年)</label>
-                <input type="number" id="years" placeholder="例: 5" step="1">
+                <input type="number" id="years" placeholder="例: 5 (空欄で逆算)" step="0.1">
             </div>
             <div class="input-group">
                 <label>金利 (%)</label>
-                <input type="number" id="rate" placeholder="例: 3.5" step="0.01">
+                <input type="number" id="rate" placeholder="例: 3.5 (空欄で逆算)" step="0.01">
             </div>
             <div class="input-group">
                 <label>年間のボーナス回数</label>
                 <select id="bonus-times">
+                    <option value="0">ボーナスなし (年0回)</option>
                     <option value="1">年1回</option>
                     <option value="2" selected>年2回</option>
                 </select>
             </div>
             <div class="input-group">
                 <label>ボーナス1回支払額 (万円)</label>
-                <input type="number" id="bonus-amount" placeholder="例: 15" step="0.1">
+                <input type="number" id="bonus-amount" placeholder="例: 15 (空欄で逆算)" step="0.1">
             </div>
 
-            <button id="calc-btn" onclick="calculateLoan()">ローンシミュレーション</button>
+            <button id="calc-btn" onclick="calculateLoan()">逆算シミュレーション実行</button>
         </div>
 
         <div id="result-section" class="hidden">
             <div class="result-box">
-                <p class="result-title">月々の支払額</p>
-                <p class="result-value"><span id="res-monthly">0</span> <span class="unit">万円</span></p>
+                <p class="result-title" id="res-title-target">導き出された答え</p>
+                <p class="result-value"><span id="res-target-val">0</span> <span class="unit" id="res-target-unit">万円</span></p>
             </div>
             <div class="result-box">
-                <p class="result-title">増えた分 (利息)</p>
+                <p class="result-title">総利息 (増えた分)</p>
                 <p class="result-value"><span id="res-interest">0</span> <span class="unit">万円</span></p>
             </div>
             <p class="joke-text">稼いだ分だけ気合いのローン！</p>
 
-            <button id="toggle-btn" class="secondary-btn" onclick="toggleSchedule()">詳細を表示</button>
+            <button id="toggle-btn" class="secondary-btn" onclick="toggleSchedule()">詳細推移を表示</button>
 
             <div id="schedule-section" class="hidden">
                 <table class="schedule-table">
@@ -74,33 +80,16 @@
                         </tr>
                     </thead>
                     <tbody id="schedule-body">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
 
         <div class="formula-section">
-            <h3>【高精度・元金二分割式の一般式】</h3>
-            <p>ボーナス分の元金を複利現価係数を用いて逆算し、毎月返済分と完全に分離して計算します。</p>
-            
+            <h3>【逆算アルゴリズムと規定制限】</h3>
+            <p>1つの変数を未知数とし、現価係数方程式や二分法を用いて自動的に逆算します。また、金融機関の規定に基づくボーナス上限（50%）の検知機構を搭載しています。</p>
             <div class="formula-block">
-                <p class="formula-title">① 総支払回数 (M)</p>
-                <p class="formula-exp">M = 支払期間(年) × 12</p>
-            </div>
-            <div class="formula-block">
-                <p class="formula-title">② 月利 (r)</p>
-                <p class="formula-exp">r = 金利(%) ÷ 100 ÷ 12</p>
-            </div>
-            <div class="formula-block">
-                <p class="formula-title">③ ボーナス分に割り当てられる元金 (P<sub>b</sub>)</p>
-                <p class="formula-exp">P<sub>b</sub> = ボーナス1回額 × ∑ [ (1+r)<sup>−t</sup> ]</p>
-            </div>
-            <div class="formula-block">
-                <p class="formula-title">④ 毎月返済分の元金 (P<sub>m</sub>)</p>
-                <p class="formula-exp">P<sub>m</sub> = (車両価格 − 頭金) − P<sub>b</sub></p>
-            </div>
-            <div class="formula-block">
-                <p class="formula-title">⑤ 月々の支払額 (X)</p>
+                <p class="formula-title">一般式: 月々の支払額 (X)</p>
                 <p class="formula-exp">X = P<sub>m</sub> × [ r(1+r)<sup>M</sup> ] ÷ [ (1+r)<sup>M</sup> − 1 ]</p>
             </div>
         </div>
